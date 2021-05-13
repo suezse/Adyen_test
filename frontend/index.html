@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drop-in integration</title>
+  <link rel="stylesheet" href="https://checkoutshopper-test.adyen.com/checkoutshopper/sdk/4.3.1/adyen.css" integrity="sha384-5CDvDZiVPuf+3ZID0lh0aaUHAeky3/ACF1YAKzPbn3GEmzWgO53gP6stiYHWIdpB" crossorigin="anonymous">
+  <link rel="stylesheet" type="text/css" href="./css/style.css">
+  <link rel="stylesheet" href="./css/bootstrap.min.css">
+</head>
+
+<body>
+  <script src="https://checkoutshopper-test.adyen.com/checkoutshopper/sdk/4.3.1/adyen.js" integrity="sha384-eNk32fgfYxvzNLyV19j4SLSHPQdLNR+iUS1t/D7rO4gwvbHrj6y77oJLZI7ikzBH" crossorigin="anonymous"></script>
+  <script src="./js/jquery-3.6.0.min.js"></script>
+  <script src="./js/bootstrap.bundle.min.js"></script>
+   
+  <div>
+    <div class="row checkoutHeader">
+      <div id="checkoutHeaderTitle">Drop-in Demo</div>
+    </div>
+    <div class="row">
+      <div class="col-5">
+        <div class="orderBg">
+          <div class="orderSummary">订单详情</div>
+          <div class="row">
+             <div class="col"><img class="itemImage" src="./images/iphone12_pro.jpg"></div>
+             <div class="col"><div class="itemText1" >iPhone 12 Pro </div><span class="itemText2">128 GB 白色</span></div>
+             <div class="col orderPrice">¥ 8,900</div>
+          </div>
+          <div class="line"></div>
+          <div class="row">
+            <div class="col itemText2">运费</div>
+            <div class="col" id="shippingPrice">¥ 20</div>
+          </div>
+          <div class="row">
+            <div class="col" id="totalToPay">总价</div>
+            <div class="col totalPrice">¥ 8,920</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-7">
+        <div id="checkout_right" class="PanelBg">
+          <div id="dropin-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <script>
+    $("#checkoutHeaderTitle").click(function(){
+      window.location.href = "./index.html";
+    });
+    const amountData = {
+      amount: {
+        value: 100 * parseInt($(".totalPrice").text().split(" ")[1].replace(",", "")),
+        currency: "CNY"
+      }
+    }
+
+    $.ajax({
+      type : 'POST',
+      url : 'http://localhost:8080/getPaymentMethods',
+      data : JSON.stringify(amountData),
+      dataType : 'json',
+      contentType: 'application/json',
+      success:function(data){
+        if(data) {
+          createCheckout(data);
+        }
+      },
+      error:function(){
+      }
+    });
+    function createCheckout(paymentMethods) {
+      const configuration = {
+        paymentMethodsResponse: paymentMethods,
+        clientKey: "test_CIXAPNBW2JERLEJ6GYYC3WBLVMO2HIZ3", 
+        locale: "zh-CN",
+        environment: "test",
+        amount: amountData.amount,
+        onSubmit: (state, dropin) => {
+           // Global configuration for onSubmit
+           // Your function calling your server to make the `/payments` request
+          $.ajax({
+            type : 'POST',
+            url : 'http://localhost:8080/createPayment',
+            data : JSON.stringify({
+              "amount": amountData.amount,
+              "paymentMethod": state.data.paymentMethod
+            }),
+            dataType : 'json',
+            contentType: 'application/json',
+            success:function(response){
+              if (response.action) {
+                  // Drop-in handles the action object from the /payments response
+                  dropin.handleAction(response.action);
+                } else {
+                  // Your function to show the final result to the shopper
+                  // showFinalResult(response);
+                  window.location.href = "http://localhost:8000/success.html";
+               }
+            },
+            error:function(){
+            }
+          });
+        },
+        onAdditionalDetails: (state, dropin) => {
+          // Your function calling your server to make a `/payments/details` request
+          makeDetailsCall(state.data)
+            .then(response => {
+              if (response.action) {
+               // Drop-in handles the action object from the /payments response
+                dropin.handleAction(response.action);
+              } else {
+               // Your function to show the final result to the shopper
+                showFinalResult(response);
+              }
+            })
+            .catch(error => {
+              throw Error(error);
+            });
+        },
+        paymentMethodsConfiguration: {
+          card: { // Example optional configuration for Cards
+            hasHolderName: true,
+            holderNameRequired: true,
+            enableStoreDetails: true,
+            hideCVC: false, // Change this to true to hide the CVC field for stored cards
+            name: 'Credit or debit card',
+            onSubmit: (data) => {
+              $.ajax({
+                type : 'POST',
+                url : 'http://localhost:8080/createPayment2',
+                data : JSON.stringify({
+                  "amount": amountData.amount,
+                  "paymentMethod": data.data.paymentMethod,
+                  "browserInfo": data.data.browserInfo
+                }),
+                dataType : 'json',
+                contentType: 'application/json',
+                success:function(response){
+                  if (response.action) {
+                      // Drop-in handles the action object from the /payments response
+                      dropin.handleAction(response.action);
+                    } else {
+                      // Your function to show the final result to the shopper
+                      // showFinalResult(response);
+                      if(response.resultCode == "Authorised") {
+                        window.location.href = "http://localhost:8000/success.html";
+                      } else {
+                        window.location.href = "http://localhost:8000/failure.html";
+                      }
+                      
+                   }
+                },
+                error:function(){}
+              });
+            }, // onSubmit configuration for card payments. Overrides the global configuration.
+          }
+        }
+      };
+      const checkout = new AdyenCheckout(configuration);
+   
+      const dropin = checkout
+        .create('dropin', {
+        // Starting from version 4.0.0, Drop-in configuration only accepts props related to itself and cannot contain generic configuration like the onSubmit event.
+            openFirstPaymentMethod:true
+        })
+        .mount('#dropin-container');
+    }
+    
+  </script>
+
+</body>
+
+</html>

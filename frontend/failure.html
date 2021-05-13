@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adyen Drop-in</title>
+  <link rel="stylesheet" type="text/css" href="./css/style.css">
+  <link rel="stylesheet" href="./css/bootstrap.min.css">
+</head>
+
+<body>
+  <script src="./js/jquery-3.6.0.min.js"></script>
+  <script src="./js/bootstrap.bundle.min.js"></script>
+   
+  <!-- add frames script -->
+  <script src="https://cdn.checkout.com/js/framesv2.min.js"></script>
+  <div class="paymentResultBody">
+    <div class="row checkoutHeader">
+      <div id="checkoutHeaderTitle">Drop-in Demo</div>
+    </div>
+    <div id="paymentResultBg">
+      <div align="center"><img id="successImg" src="./images/failure.jpg"></div>
+      <div id="failureText" >Payment Failure</div>
+      <div id="successDesText" >Something Went Wrong! Your can try again later.</div>
+    </div>
+  </div>
+
+
+  <script>
+    $("#checkoutHeaderTitle").click(function(){
+      window.location.href = "./index.html";
+    });
+  </script>
+
+</body>
+
+</html>
