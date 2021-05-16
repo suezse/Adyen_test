@@ -79,6 +79,7 @@
         clientKey: "test_CIXAPNBW2JERLEJ6GYYC3WBLVMO2HIZ3", 
         locale: "zh-CN",
         environment: "test",
+        allowPaymentMethods: ["scheme", "alipay"],
         amount: amountData.amount,
         onSubmit: (state, dropin) => {
            // Global configuration for onSubmit
@@ -108,19 +109,29 @@
         },
         onAdditionalDetails: (state, dropin) => {
           // Your function calling your server to make a `/payments/details` request
-          makeDetailsCall(state.data)
-            .then(response => {
+          $.ajax({
+            type : 'POST',
+            url : 'http://localhost:8080/paymentDetails',
+            data : JSON.stringify(state.data),
+            dataType : 'json',
+            contentType: 'application/json',
+            success:function(response){
               if (response.action) {
-               // Drop-in handles the action object from the /payments response
-                dropin.handleAction(response.action);
-              } else {
-               // Your function to show the final result to the shopper
-                showFinalResult(response);
-              }
-            })
-            .catch(error => {
-              throw Error(error);
-            });
+                  // Drop-in handles the action object from the /payments response
+                  dropin.handleAction(response.action);
+                } else {
+                  // Your function to show the final result to the shopper
+                  // showFinalResult(response);
+                  if(response.resultCode == "Authorised") {
+                    // window.location.href = "http://localhost:8000/success.html";
+                  } else if(response.resultCode == "Refused"){
+                    window.location.href = "http://localhost:8000/failure.html";
+                  }
+                  
+               }
+            },
+            error:function(){}
+          });
         },
         paymentMethodsConfiguration: {
           card: { // Example optional configuration for Cards

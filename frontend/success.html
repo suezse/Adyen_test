@@ -26,8 +26,36 @@
 
   <script>
     $("#checkoutHeaderTitle").click(function(){
-      window.location.href = "./index.html";
+      window.location.href = "./index.html";   
     });
+    const researchURL = window.location.search.split("redirectResult=");
+    if (researchURL.length > 1) {
+      $.ajax({
+        type : 'POST',
+        url : 'http://localhost:8080/paymentDetails',
+        data : JSON.stringify({
+          "redirectResult": researchURL[1]
+        }),
+        dataType : 'json',
+        contentType: 'application/json',
+        success:function(response){
+          if (response.action) {
+              // Drop-in handles the action object from the /payments response
+              dropin.handleAction(response.action);
+            } else {
+              // Your function to show the final result to the shopper
+              // showFinalResult(response);
+              if(response.resultCode == "Authorised") {
+                // window.location.href = "http://localhost:8000/success.html";
+              } else if(response.resultCode == "Refused"){
+                window.location.href = "http://localhost:8000/failure.html";
+              }
+              
+           }
+        },
+        error:function(){}
+      });
+    }
   </script>
 
 </body>
